@@ -1,0 +1,104 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional //EN">
+<html>
+<head>
+  <meta name="GENERATOR" content="mkd2html 2.1.8 DL=DISCOUNT">
+  <meta http-equiv="Content-Type"
+        content="text/html; charset=utf-8">  <link rel="stylesheet"
+        type="text/css"
+        href="assets/CSS/i2-Book.css" />
+</head>
+<body>
+<h1>Checkpoint Firewall regler der ikke anvendes</h1>
+
+<p><strong>i2drd</strong> er et system til detektering af hvilke regler i et
+Check Point Firewewall regelsæt der ikke anvendes.</p>
+
+<p>Systemet består af følgende komponenter:</p>
+
+<ul>
+<li>En web-server: her anvendes basisprogrammel leveret med af Check Point</li>
+<li>En samling programmer til
+
+<ul>
+<li>parsing af reglesæt databasen</li>
+<li>parsing af <em>den eksporterede logfil</em></li>
+<li>konverting af data til hhv. <em>html</em> og <em>csv</em>.</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Adgang til serveren styres i firewall regelsættet.</p>
+
+<p>Logfiler eksporteres én gang i døgnet (se dokumentation for programpakken
+<strong>UNItools</strong>). Når processen er overstået starter <strong>i2drd</strong>&rsquo;s analyse af
+regelsættet.</p>
+
+<h1>Oprydning</h1>
+
+<ul>
+<li> Inaktive regler anvendes ikke i regelsættet og har fået
+ <html><span style="background-color:#FF9966;">denne farve (orange)</span></html>.
+ De kan slettes med mindre de tjener et dokumentations- eller andet formål.</li>
+<li> Regler uden hits siden start har fået <html><span style="background-color:#FFD6FF;">denne farve (pink)</span></html>. Hvis der er <strong>slået logning til på reglen</strong> bør man overveje om reglen tjener et formål.</li>
+<li> Regler uden hits idag har fået <html><span style="background-color:#FFFFEE;">denne farve (vissen gul)</span> og bør undersøges</html>. Dato for sidste hit samt antal dage siden står i rapporten.</li>
+</ul>
+
+
+<h2>Begrænsninger</h2>
+
+<p>Analysen har en række begrænsninger. Hvis f.eks. en regel ser sådan ud:</p>
+
+<p><html></p>
+
+<table>
+    <thead>
+        <tr>
+            <th>
+                Nr.</th>
+            <th>
+                Source</th>
+            <th>
+                Destignation</th>
+            <th>
+                Service</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                1</td>
+            <td>
+                internal_mail_1<br />
+                internal_mail_2<br />
+                <span style="background-color:#ffffe0;">monitor_host_1</span></td>
+            <td>
+                external_mail_1<br />
+                external_mail_2</td>
+            <td>
+                SMTP<br />
+                <span style="background-color:#ffffe0;">ICMP</span></td>
+        </tr>
+    </tbody>
+</table>
+
+
+<p></html></p>
+
+<p>Og der er f.eks. 100 hits på reglen, kan man ikke afgøre andet end at reglen bliver brugt.</p>
+
+<p>Dvs. det kan være at det eneste der rammer reglen er <code>monitor_host_1</code> der
+sender <code>ICMP Echo Request</code> mod <code>external_mail_2</code> og de andre maskiner er slukkede.</p>
+
+<p>Det samme er tilfældet for regler der indeholder <em>grupper</em>, <em>ranges</em> og netværk: det kan
+være at det er en enkelt adresse der står for al trafikken.</p>
+
+<h1>Rettigheder og det med småt</h1>
+
+<p>Systemet er ejet af <a href="http://www.i2.dk">i2.dk</a> og må kun anvendes af kunder
+med en gyldig firewall driftaftale med i2.dk.</p>
+
+<p>i2.dk har skrevet og dermed ejerskab til al programmel, mens data i form af
+rapporter tilhører kunden. Kopiering af programmel er ikke tilladt.</p>
+</body>
+</html>

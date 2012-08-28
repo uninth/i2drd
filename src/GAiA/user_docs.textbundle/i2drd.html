@@ -1,0 +1,143 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional //EN">
+<html>
+<head>
+  <meta name="GENERATOR" content="mkd2html 2.1.8 DL=DISCOUNT">
+  <meta http-equiv="Content-Type"
+        content="text/html; charset=utf-8">  <link rel="stylesheet"
+        type="text/css"
+        href="assets/CSS/i2-Book.css" />
+</head>
+<body>
+<h1>Detecting Dead Rules in Check Point firewall rule bases</h1>
+
+<p><strong>i2drd</strong> is a simple system aiming to detect unused rules in a Check Point
+firewall rule base. This version is compatible with GAiA and has been tested on
+R77.10, R77.20 and R77.30, and should work with all later R77.x versions. It may
+work with other versions: the rule base format and the log file format is detected
+and the required information available from R65 and onwards, but the web server
+configuration requires R77.</p>
+
+<p><strong>UNIfw1lr</strong> is free software and released under a
+<a href="https://opensource.org/licenses/BSD-3-Clause">modified BSD License</a>, see LICENSE. Using the
+software requires a valid support contract with <a href="http://www.checkpoint.com">Check Point Technologies</a>.</p>
+
+<p><strong>i2drd</strong> is installed as an <a href="http://en.wikipedia.org/wiki/RPM_Package_Manager">rpm package</a> and
+the installation and configuration is described in <code>INSTALL.md</code>.</p>
+
+<p>The system consist of the following components:</p>
+
+<ul>
+<li>A Web-server: the system uses the <a href="https://en.wikipedia.org/wiki/Apache_HTTP_Server">apache web server</a>
+supplied and maintained by Check Point, as part of the base operating system</li>
+<li>A collection of applications for parsing the <em>rule base</em>, extracting information from the <em>exported logfile</em> etc.</li>
+</ul>
+
+
+<p>Access to the web-server is controlled by the firewall. The server runs on <strong>TCP
+port 8088</strong>. This may be changed in <code>/var/opt/i2drd/etc/drd</code> but is not
+recommended.</p>
+
+<p>Log files are exported on a daily basis at midnight as configured in <strong>UNIfw1lr</strong>.</p>
+
+<p>Processing the rule base and log file in order to detect unused rules starts at 13:59. This may change in the future.</p>
+
+<p>All rules has a unique <em>UUID</em> which is logged. <strong>i2drd</strong> reads the log file and the rule base and counts the number
+of hits for each UUID. The result is written to a database and includes the last time a rule had a hit.</p>
+
+<p>The date and time of the first time <strong>i2drd</strong> runs is recorded.</p>
+
+<h1>House keeping</h1>
+
+<ul>
+<li> Inactive rules are not used actively in the rule base and are marked with <html><span style="background-color:#FF9966;">this color(orange)</span></html>.
+They may be deleted unless they serve any other purpose (e.g. documentation).</li>
+<li> Rules with no hits since <em>first run</em> are marked with <html><span style="background-color:#FFD6FF;">this color(pink)</span></html>.
+If <em>logging is disabled on the rule</em> then consider deleting the rule: it does not serve any firewall purpose.</li>
+<li> Rules without hits today are marked with <html><span style="background-color:#FFFFEE;">this color (pale yellow)</span></html> and should be checked firmly.
+The date the rule was last used and the number of days since then is in the report.</li>
+</ul>
+
+
+<p><html><div style="page-break-before: always"> &nbsp;</div></html>
+An example is shown here:</p>
+
+<p><img src="assets/img/example.png" alt="example" /></p>
+
+<h2>Limitations</h2>
+
+<p>The scope of the application are <em>rules</em>, not the <em>individual sources</em>, <em>destinations</em> and
+<em>services</em> which makes up a rule.</p>
+
+<p>Assume there is 100 hits on the rule below, which has 3 sources, 2 destinations
+and two services.</p>
+
+<p><html></p>
+
+<table>
+<thead>
+<tr>
+<th>
+Nr.</th>
+<th>
+Source</th>
+<th>
+Destignation</th>
+<th>
+Service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+1</td>
+<td>
+internal_mail_1<br />
+internal_mail_2<br />
+<span style="background-color:#ffffe0;">monitor_host_1</span></td>
+<td>
+external_mail_1<br />
+external_mail_2</td>
+<td>
+SMTP<br />
+<span style="background-color:#ffffe0;">ICMP</span></td>
+</tr>
+</tbody>
+</table>
+
+
+<p></html></p>
+
+<p>As we only know the hit count it is only possible to conclude that the rule is in use.
+It is however <em>not possible</em> to determine which network and service objects is used.</p>
+
+<p>It may be that <code>monitor_host_1</code> is monitoring <code>external_mail_2</code> with <code>ICMP Echo Request</code>
+while no mail is processed.</p>
+
+<p>The same goes for <em>group objects</em>, <em>ranges</em> and <em>networks</em>: one single host may be responsible
+for all traffic.</p>
+
+<p>Proceed with care.</p>
+
+<p><html><div style="page-break-before: always"> &nbsp;</div></html></p>
+
+<h3>Notice</h3>
+
+<p>The package <strong>i2drd</strong> will be merged with <strong>UNIfw1lr</strong> (UNI•C firewall-1 log rotation) in
+the not so near future (don&rsquo;t hold your breath).</p>
+
+<p>It is important to write documentation and guidelines as an integrated part of the software
+development process. So this documentation is made using common software tools
+and organised as text files written in <a href="https://en.wikipedia.org/wiki/Vi">vi</a>,
+saved as github flavored <a href="https://en.wikipedia.org/wiki/Markdown">markdown</a>,
+controlled by a <a href="https://en.wikipedia.org/wiki/Make_(software">makefile</a> and
+converted do <a href="www.w3schools.com/html/html_intro.asp">html</a> and
+<a href="https://en.wikipedia.org/wiki/Portable_Document_Format">pdf</a> with
+<a href="www.pell.portland.or.us/~orc/Code/discount">discount</a> and
+<a href="http://wkhtmltopdf.org">wkhtmltopdf</a>. Everything kept and controlled in
+<a href="https://www.atlassian.com/git/tutorials/what-is-git">git</a>.</p>
+
+<p>The silly front page is made with a Mac application, saved as pdf and processed
+with <code>pdfunite</code>. Just for fun, and finished <a href="https://en.wikipedia.org/wiki/Fakta">in shorter time than going
+shopping in Fakta</a>.</p>
+</body>
+</html>

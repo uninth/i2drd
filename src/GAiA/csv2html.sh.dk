@@ -1,0 +1,276 @@
+#!/var/opt/UNItools/bin/bash
+#
+# Copyright (c) 2016 Niels Thomas Haugård. All Rights Reserved.
+#
+
+#
+# vars
+#
+
+MY_LOGFILE=/var/opt/i2drd/log/drd.log
+LOGGER="logger -t `basename $0` -p mail.crit"
+
+datediff() {
+	d1=$(date -d "$1" +%s)
+	d2=$(date -d "$2" +%s)
+	echo $(( (d1 - d2) / 86400 )) days
+}
+
+logit() {
+# purpose     : Timestamp output
+# arguments   : Line og stream
+# return value: None
+# see also    :
+        LOGIT_NOW="`/bin/date '+%H:%M:%S (%d/%m)'`"
+        STRING="$*"
+
+        if [ -n "${STRING}" ]; then
+                $echo "${LOGIT_NOW} ${STRING}" >> ${MY_LOGFILE}
+                ${LOGGER} "${LOGIT_NOW} ${STRING}"
+                if [ "$VERBOSE" = "TRUE" ]; then
+                        $echo "${LOGIT_NOW} ${STRING}"
+                fi
+        else
+                while read LINE
+                do
+                        if [ -n "${LINE}" ]; then
+                                $echo "${LOGIT_NOW} ${LINE}" >> ${MY_LOGFILE}
+                                ${LOGGER} "${LOGIT_NOW} ${LINE}"
+                                if [ "$VERBOSE" = "TRUE" ]; then
+                                        $echo "${LOGIT_NOW} ${STRING}"
+                                fi
+                        else
+                                $echo "" >> ${MY_LOGFILE}
+                        fi
+                done
+        fi
+}
+
+
+CSVFILE=$1
+LOGFILE=$2
+
+if [ ! -f "$LOGFILE" ]; then
+	echo "log-file '$LOGFILE' not found, bye"
+	exit 
+fi
+
+if [ ! -f "$CSVFILE" ]; then
+	echo "csv-file '$CSVFILE' not found, bye"
+	exit 
+fi
+
+
+REPORT=`basename $CSVFILE .csv`.html
+
+MYDIR=/var/opt/i2drd
+REPORTDIR=${MYDIR}/reports/
+
+REPORT=${REPORTDIR}/${REPORT}
+
+EPOCH=`cat $MYDIR/db/first_data_seen_date`
+
+################################################################################
+# Main
+################################################################################
+
+VERBOSE=TRUE
+
+echo=/bin/echo
+case ${N}$C in
+"") if $echo "\c" | grep c >/dev/null 2>&1; then
+	N='-n'
+else
+	C='\c'
+fi ;;
+esac
+
+if [ -f "$REPORT" ]; then
+	echo "'$REPORT' findes, bye"
+	exit 0
+fi
+
+NOW=`date +%Y%m%d%H%M`
+
+#FIRST=`head -2 $LOGFILE | tail -1 | awk -F';' '{ print $2 " " $3 }'`
+FIRST=`head -20 $LOGFILE |  awk -F';' '$1 == 0 { print $2 " " $3 }'`
+LAST=`tail -1 $LOGFILE | awk -F';' '{ print $2 " " $3 }'`
+
+logit "First line: $FIRST, Last line: $LAST"
+logit "Time: `datediff $FIRST $LAST`"
+    
+TITLE="Status for regler der ikke anvendes"
+REPORT_TIME="`export LC_ALL=da_dk.UTF-8; export LANG=da_DK.UTF-8; /bin/date +'%d %B %Y kl %H:%M:%S'`"
+
+logit "Report on $REPORT_TIME ... "
+
+cat $CSVFILE | iconv -f latin1 -t utf-8 | (
+
+cat << EOF
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+    <HEAD>
+		<meta charset="UTF-8">
+        <TITLE>$TITLE</TITLE>
+<STYLE TYPE="text/css"> <!-- BODY,DIV,TABLE,THEAD,TBODY,TFOOT,TR,TH,TD,P { font-family:"Arial"; font-size:x-small } --> </STYLE>
+<STYLE TYPE="text/css">
+body { color: #000000; } span.c1 {color: #FFFFFF; }
+table { width: 100%; border: 0; }
+th,td{ vertical-align: top; border-spacing: 0; border: 0; border-collapse: collapse; padding: 0.6em; }
+.copyright { border-top: 1px solid #999; font-family:verdana, arial, sans-serif; font-size:x-small; color:#999; }
+</STYLE>
+    </HEAD>
+    <BODY>
+        <TABLE FRAME="VOID" CELLSPACING="10" COLS="1" RULES="NONE" BORDER="0"><TBODY><TR><TD>
+		<H1>$TITLE</H1>
+		<P>
+		Dette er en rapport over hvilke regler i regelsættet der har været anvend i tidsrummet mellem <em>start</em> og <em>slut</em>.<br><br>
+		Rapporten er laver med <em>i2drd</em>. En beskrivelse af værktøjet findes <a href="/i2drd.pdf" target="_blank">her</a>.<br><br>
+		<H2>Rapport info</H2>
+		<ul>
+		<li>Start: <strong>$FIRST</strong>
+		<li>Slut:  <strong>$LAST</strong>
+		<li>Første loginfo nogensinde er den<strong>$EPOCH</strong>
+		<li>Rapporten er udarbejdet den <strong>$REPORT_TIME</strong>
+		<li>Rapporten findes også som en <a href="/rapport.csv" hdownload="rapport.csv">csv fil</a>
+		</ul>
+		<H2>Farvekoder</H2>
+		<ul>
+		<li>Disablede regler har fået <span style="background-color:FF9966;">dene farve</span>, har ingen funktion og kan slettes.
+		<li>Regler uden hits har fået <span style="background-color:FFD6FF;">denne farve</span> og er kandidater til at blive slettet <em>hvis logning er slået til</em>. Ellers er det blot regler uden logning og antallet af hits er ukendt og der står blot <em>aldrig</em> i kollonnen seneste i mangel af bedre.
+		<li>Regler uden hits idag har fået <span style="background-color:#FFFFEE;">denne farve</span> og bør undersøges. Antal dage siden reglen sidst havde hits står i paranteser.
+		</ul>
+		<H2>Rapport</H2>
+		<P>
+Kollonnerne  betyder følgende:
+<UL>
+	<li><b>Enabled-Disabled</b>: Reglen er aktiv/inaktiv.
+	<li><b>Nr.</b>: Regelnummer i regelsættet (fortløbende).
+	<li><b>Regel navn</b>: Regelnavn (mere permanent end regel nummer)
+	<li><b>Hits</b>: Antal hits på reglen i dag. Ikke antal hits pr. objekt i reglen.
+	<li><b>Seneste</b>: Seneste dato/tid hvor reglen har været brugt.
+	<li><b>uuid</b>: Reglens UUID - kan ikke ses i regelsættet, men bruges til kontrol i forbindelse med match mellem regelsæt, logfiler osv.
+	<li><b>Source</b>: IP Source info fra reglen
+	<li><b>Destignation</b>: IP destignation info fra reglen
+	<li><b>Service</b>: Service info
+	<li><b>Action</b>: Hvad der skal ske ved match på source, destignation og service
+	<li><b>Log</b>: Logning på reglen: uden logning er oversigten her værdiløs (men der kan være god grund til ikke at logge trafik)
+	<li><b>Beskrivelse</b>: Beskrivelse fra reglen.
+</ul></p>
+Antallet af hits er for en logfil/et døgn ad gangen, dvs de akkumuleres ikke melem rapporterne. Tidspunktet for den sidst sete forbindelse overføres mellem rapporterne. Reglens UUID er medtaget i rapporten til brug ved fejlsøgning. Det kan anvendes til f.eks. opslag og filtrering i Check Point's logviewer<br>
+
+</P>
+		<TABLE FRAME="VOID" CELLSPACING="1" COLS="9" RULES="NONE" BORDER="1" WIDTH="100%">
+            <TBODY>
+                <TR>
+		    <!-- burde være #80E2FA | 0066CC -->
+                    <TD style="width:5%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Enabled-Disabled</SPAN></TD> 
+                    <TD style="width:5%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Nr.</SPAN></TD> 
+                    <TD style="width:5%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Regel navn</SPAN></TD> 
+                    <TD style="width:5%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Hits</SPAN></TD>
+                    <TD style="width:5%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Seneste</SPAN></TD>
+                    <TD style="width:10%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">uuid</SPAN></TD>
+                    <TD style="width:10%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Source</SPAN></TD> 
+                    <TD style="width:10%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Destignation</SPAN></TD> 
+                    <TD style="width:10%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Service</SPAN></TD> 
+                    <TD style="width:5%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Action</SPAN></TD> 
+                    <TD style="width:5%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Log</SPAN></TD> 
+                    <TD style="width:25%" ALIGN="center" BGCOLOR="#0080FF"><SPAN CLASS="c1">Beskrivelse</SPAN></TD> 
+                </TR>
+EOF
+
+# "Nr;Navn;Enabled/Disabled;Log;AntalIdag;Seneste;UUID;Source;Destignation;Service;Action;Beskrivelse"
+#  1  2    3                4   5         6       7    8      9            10      11     12
+
+	awk -F';' '
+	BEGIN {
+		BG = 0 ;
+		red =  "FF9966";
+		pink = "FFD6FF";
+		br_yellow = "FFFFEE";	# FDFFAE
+		header = "FFF866" # lys blaa eff6ff
+
+	}
+	$5 == "AntalIdag" { next; }
+
+	$1 == "__HEADER__" {
+		print "<TR>"
+		COLOR = header;
+		print "    <TD COLSPAN="12"; ALIGN=\"left\"; BGCOLOR=\"#" COLOR "\"><FONT SIZE="large"> "$2"</FONT></TD>"
+		print "</TR>"
+		next
+
+	}
+	{
+   		if (BD == 0)
+		{
+   			BD = 1
+			COLOR = "FFFFFF"; # white
+			DEM = COLOR;
+		}
+		else
+		{
+   			BD = 0
+			COLOR = "E6E6E6"; # grey
+			DEM = COLOR;
+		}
+
+		# emfasize something?
+		EM = COLOR;
+
+		if ($3 == "disabled")		# regel disabled
+		{
+			DEM =  red;
+		}
+		else if ($4 == "None")
+		{
+			EM = COLOR;		# ingen logning
+		}
+		else if ($6 == "aldrig")	# aldrig set trafik ved regel
+		{
+			EM =  pink;
+		}
+		else if ($5 == 0)		# 0 hits idag, hits tidligere og log slået til
+		{
+			EM = br_yellow;
+		}
+		else 
+		{
+			DEM = COLOR;
+			EM =  COLOR;
+		}
+
+
+		gsub(",", "<br>", $0);
+		print "<TR>"
+		print "    <TD ALIGN=\"left\";	BGCOLOR=\"#" DEM "\">"$3"</TD>"
+		print "    <TD ALIGN=\"right\";	BGCOLOR=\"#" EM "\">"$1"</TD>"
+		print "    <TD ALIGN=\"left\";	BGCOLOR=\"#" EM "\">"$2"</TD>"
+		print "    <TD ALIGN=\"right\";	BGCOLOR=\"#" EM "\">"$5"</TD>"
+		print "    <TD ALIGN=\"left\"; BGCOLOR=\"#" EM "\">"$6"</TD>"
+		print "    <TD ALIGN=\"left\";	BGCOLOR=\"#" COLOR "\">"$7"</TD>"
+		print "    <TD ALIGN=\"left\"; BGCOLOR=\"#" COLOR "\">"$8"</TD>"
+		print "    <TD ALIGN=\"left\";	BGCOLOR=\"#" COLOR "\">"$9"</TD>"
+		print "    <TD ALIGN=\"left\";	BGCOLOR=\"#" COLOR "\">"$10"</TD>"
+		print "    <TD ALIGN=\"center\";	BGCOLOR=\"#" COLOR "\">"$11"</TD>"
+		print "    <TD ALIGN=\"center\"; BGCOLOR=\"#" EM "\">"$4"</TD>"
+		print "    <TD ALIGN=\"left\";	BGCOLOR=\"#" COLOR "\">"$12"</TD>"
+		print "</TR>"
+		next
+	}
+'
+
+cat << 'EOF'
+            </TBODY>
+        </TABLE>
+	</TD></TR></TBODY></TABLE>
+<br>
+<hr>
+Denne rapport er lavet af en samling scripts og kan derfor indeholde fejl. Rapporten er ikke set igennem før den er afleveret. Rapportens indhold er identisk med en vedlagt csv fil.
+</P>
+</BODY>
+</HTML>
+EOF
+)  > ${REPORT}
+
+logit "report done. saved as ${REPORT}"

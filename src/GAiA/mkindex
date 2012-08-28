@@ -1,0 +1,143 @@
+#!/var/opt/UNItools/bin/bash
+#
+# Copyright (c) 2016 Niels Thomas Haugård. All Rights Reserved.
+#
+#
+# TODO
+#	* error handling code 255 (CP) on errors displayed in HTML
+#	* clean-up
+
+function mkglobal_index()
+{
+
+echo "making index.html i $HTML ... "
+cd $HTML
+
+INDEX=index.html
+
+TITLE="Status for regler der ikke anvendes"
+
+(
+cat $HTMLHEAD | sed "s/_TITLE_/$TITLE/g"
+cat << EOH
+<BODY>
+<TABLE FRAME="VOID" CELLSPACING="1" COLS="1" RULES="NONE" BORDER="1"><TBODY><TR><TD>
+<H1>$TITLE</H1>
+</P>
+<div class="unistyle">
+<table>
+<thead><tr>
+<th>Regler der ikke anvendes - html</th>
+<th>Regler der ikke anvendes - csv</th>
+</tr></thead>
+<tbody>
+EOH
+
+################################################################################
+#
+# report_2016_June_10_2259 (html csv)
+
+find .  -maxdepth 1 -type f | sort -nr | gawk -F'_' '
+	BEGIN {
+		ALT = 0 ; 
+		split("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",month)
+		for (i in month) {
+			month_nums[month[i]]=i
+		}
+	}
+	{
+		if (ALT == 0)
+		{
+			print "<tr>"
+			print "<td><a href=\"" $0 "\">" $0 "</a></td>"
+			print "<td><a href=\"" $0 "\">" $0 "</a></td>"
+			print "</td>"
+			ALT = 1
+			next
+		}
+		else
+		{
+			print "<tr class=\"alt\">"
+			print "<td><a href=\"" $0 "\">" $0 "</a></td>"
+			print "<td><a href=\"" $0 "\">" $0 "</a></td>"
+			print "</td>"
+			ALT = 0
+			next
+		}
+	}
+'
+
+
+cat << EOF
+</tbody>
+</table>
+</div>
+<H1>General information</H1>
+Please notice
+<ul>
+<li>The firewall documentation is made with an application from Check Point and covers only the firewall policy, NAT blade and the used objects.</br>
+<li>The route tables does not cover IPv6, TAP and TUN interfaces on the enforcement module status. This will change in the future.</br>
+<li>The icons in the fireall documentation does not show up when using Safari; it does when using Firefox, IE and Chrome.</br>
+</ul>
+<P>
+</body>
+</html>
+EOF
+) > $INDEX
+
+# <li>Documentation made by the previous version of UNIfw1doc is located <a href="html/index.html">here.</a>
+
+chmod -R 444 $INDEX
+}
+
+
+################################################################################
+# Main
+################################################################################
+
+BASEPATH=/var/opt/i2drd/ 
+TMPDIR=${BASEPATH}/tmp
+ETCDIR=${BASEPATH}/etc
+
+RUNDIR=${BASEPATH}/tmp/rundir			# Leave tmp ouput files somewhere
+test -d "${RUNDIR}" || {
+	/bin/mkdir -p ${RUNDIR}
+}
+
+MY_LOGFILE=${TMPDIR}/log
+TMPFILE=${TMPDIR}/tmpfile
+
+echo=/bin/echo
+case ${N}$C in
+	"") if $echo "\c" | grep c >/dev/null 2>&1; then
+		N='-n'
+	else
+		C='\c'
+	fi ;;
+esac
+
+# Script runs by cron so set up the admin environment
+for RC in $HOME/.profile $HOME/.bash_profile  $HOME/.bashrc /tmp/.CPprofile.sh
+do
+	if [ -f $RC ]; then
+		. $RC
+		echo ". $RC ... "
+	else
+		echo "$RC not found, ignored"
+
+	fi
+done
+
+HTMLHEAD=${ETCDIR}/htmlhead.txt
+test -f ${HTMLHEAD} || {
+	echo "$HTMLHEAD not found, bye"
+	exit 0
+
+}
+
+DATA=${BASEPATH}/data
+HTML=${BASEPATH}/data/html				# DocumentRoot
+echo "HTML dir: $HTML"
+
+mkglobal_index
+

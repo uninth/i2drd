@@ -1,0 +1,3 @@
+**i2drd** is a simple system aiming to detect unused rules in a Check Point
+firewall rule base. This version is compatible with GAiA and has been tested on
+R77.10, R77.20 and R77.30, and should work with all later R77.x versions.
