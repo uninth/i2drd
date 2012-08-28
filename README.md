@@ -15,7 +15,7 @@ the web server configuration requires R77.
 
 ## Deployment
 
-The package **UNItools* and **UNIfw1lr** are prerequisite to i2drd: the first
+The package **UNItools** and **UNIfw1lr** are prerequisite to i2drd: the first
 provides tools while the later exports the logfile.        
 Using **i2drd** may require a valid support contract with [Check Point
 Technologies](http://www.checkpoint.com).       
